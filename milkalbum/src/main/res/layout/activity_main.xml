@@ -7,11 +7,9 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="com.cc.milkalbum.MainActivity">
 
-    <ListView
-        android:id="@+id/lvGirls"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:divider="#ccc"
-        android:dividerHeight="5dp" >
-    </ListView>
+    <FrameLayout
+        android:id="@+id/id_content"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent" />
+
 </RelativeLayout>
