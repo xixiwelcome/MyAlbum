@@ -39,6 +39,4 @@ public class ResInfoUtils {
         }
         return girls;
     }
-
-
 }

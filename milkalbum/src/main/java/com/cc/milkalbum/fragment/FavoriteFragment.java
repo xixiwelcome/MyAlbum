@@ -1,6 +1,5 @@
 package com.cc.milkalbum.fragment;
 import com.cc.milkalbum.model.Girl;
-import com.cc.milkalbum.utils.ResInfoUtils;
 import java.util.ArrayList;
 
 
@@ -9,16 +8,16 @@ public class FavoriteFragment extends BaseListFragment {
      * 初始化数据
      */
     protected void init() {
-        girls = new ArrayList<Girl>();
-        Girl general = new Girl();
-        girls.add(general);
+        girls =  new ArrayList<Girl>();
     }
 
     /**
      * 加载数据
      */
-    protected void updateGirls(){
-        girls.add(0, new Girl());
+    public void updateGirls(){
+        girls.clear();
+        girls = dbHelper.getAll(null, null);
+        girlAdapt.notifyDataSetChanged();
     }
 
 }

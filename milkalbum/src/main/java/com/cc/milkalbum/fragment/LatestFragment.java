@@ -20,5 +20,6 @@ public class LatestFragment extends BaseListFragment {
         while( girls == null ){
             girls = ResInfoUtils.getGirlsInfo( r.nextInt(80), GetDataLimit);
         }
+        girlAdapt.notifyDataSetChanged();
     }
 }

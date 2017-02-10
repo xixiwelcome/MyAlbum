@@ -7,6 +7,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.app.Fragment;
 import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.util.SparseArray;
 import android.view.LayoutInflater;
@@ -25,7 +26,7 @@ import com.cc.milkalbum.model.Girl;
 import com.cc.milkalbum.utils.ImgUtils;
 import com.handmark.pulltorefresh.library.PullToRefreshBase;
 import com.handmark.pulltorefresh.library.PullToRefreshListView;
-
+import com.cc.milkalbum.dao.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,11 +38,16 @@ public class BaseListFragment extends Fragment {
     protected View mView;
     protected ImgUtils imgUtils;
     protected static final int GetDataLimit = 1;
+    protected static GirlDBHelper dbHelper = null;
 
+    public static final int MSG_REFRESH_FINISH = 1;
 
     private Handler handler = new Handler() {
         public void handleMessage(android.os.Message msg) {
             switch (msg.what) {
+                case MSG_REFRESH_FINISH:
+                    girlAdapt.notifyDataSetChanged();
+                    break;
                 case ImgUtils.SUCCESS:
                     //给控件设置图片
                     Bitmap bitmap = (Bitmap) msg.obj;
@@ -51,7 +57,7 @@ public class BaseListFragment extends Fragment {
                         image.setImageBitmap(bitmap);
                     }
                     Log.d("cbx", "Handler got message, findViewWithTag: " + position);
-                    girlAdapt.notifyDataSetChanged();
+                    // girlAdapt.notifyDataSetChanged();
                     break;
                 case ImgUtils.FAIL:
                     Toast.makeText(getContext(), "图片下载失败", Toast.LENGTH_SHORT).show();
@@ -71,6 +77,9 @@ public class BaseListFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         imgUtils = new ImgUtils(getContext(), handler);
         super.onCreate(savedInstanceState);
+        if(dbHelper == null) {
+            dbHelper = new GirlDBHelper(getContext());
+        }
     }
 
     @Override
@@ -99,7 +108,7 @@ public class BaseListFragment extends Fragment {
         lvGirls.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Toast.makeText(getContext(), girls.get(position - 1).getAuthorName() + ":被短按 ", Toast.LENGTH_SHORT).show();
+                dbHelper.insert(girls.get(position - 1));
             }
 
         });
@@ -134,7 +143,10 @@ public class BaseListFragment extends Fragment {
         protected void onPostExecute(String[] result) {
             // Call onRefreshComplete when the list has been refreshed.
             lvGirls.onRefreshComplete();
-            girlAdapt.notifyDataSetChanged();
+            // girlAdapt.notifyDataSetChanged();
+            Message message = Message.obtain();
+            message.what = MSG_REFRESH_FINISH;
+            handler.sendMessage(message);
             super.onPostExecute(result);
         }
     }

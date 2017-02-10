@@ -81,6 +81,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     // 切换到favorite
                     transaction.hide(flLatest);
                     transaction.show(flFavorite);
+                    flFavorite.updateGirls();
                     currentTab = TabFavorite;
                     transaction.commit();
                 }

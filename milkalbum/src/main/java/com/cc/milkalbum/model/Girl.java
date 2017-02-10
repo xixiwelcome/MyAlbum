@@ -95,4 +95,13 @@ public class Girl {
             return "";
         return ConstantUtils.PictureUrlHeader + catalog + "/" + issue + "/" + index + ".jpg";
     }
+
+    public String toString(){
+        return "id: " + id + ", authorName: " + authorName +
+            ", authorHeadImg: " + authorHeadImg +
+            ", title: " + title +
+            ", catalog: " + catalog +
+            ", issue: " + issue +
+            ", pictureCount: " + pictureCount;
+    }
 }

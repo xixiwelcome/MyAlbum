@@ -7,29 +7,37 @@ import android.database.SQLException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteQueryBuilder;
+import android.util.Log;
 
-class GirlDBHelper extends SQLiteOpenHelper {
-    private static final String DATABASE_NAME="lunchlist.db";//数据库名称
-    private static final int SCHEMA_VERSION=2;//版本号,则是升级之后的,升级方法请看onUpgrade方法里面的判断
+import com.cc.milkalbum.model.Girl;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class GirlDBHelper extends SQLiteOpenHelper {
+    private static final String DATABASE_NAME = "girls.db";//数据库名称
+    private static final String TABLE_FAVORITE_GIRLS = "favoriteGirls";
+    private static final int SCHEMA_VERSION = 1;//版本号,则是升级之后的,升级方法请看onUpgrade方法里面的判断
 
     public GirlDBHelper(Context context) {//构造函数,接收上下文作为参数,直接调用的父类的构造函数
         super(context, DATABASE_NAME, null, SCHEMA_VERSION);
     }
 
     @Override
-    public void onCreate(SQLiteDatabase db) {//创建的是一个午餐订餐的列表,id,菜名,地址等等
-        db.execSQL("CREATE TABLE restaurants (_id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, address TEXT, type TEXT, notes TEXT, phone TEXT);");
+    public void onCreate(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE " + TABLE_FAVORITE_GIRLS + " (_id INTEGER PRIMARY KEY AUTOINCREMENT, authorName TEXT, " +
+                "authorHeadImg TEXT, catalog TEXT, title TEXT, issue TEXT, pictureCount INT, " +
+                "createTime TIMESTAMP default (datetime('now', 'localtime')));");
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        if (oldVersion==1 && newVersion==2) {//升级判断,如果再升级就要再加两个判断,从1到3,从2到3
-            db.execSQL("ALTER TABLE restaurants ADD phone TEXT;");
-        }
+
     }
 
-    public Cursor getAll(String where, String orderBy) {//返回表中的数据,where是调用时候传进来的搜索内容,orderby是设置中传进来的列表排序类型
-        StringBuilder buf=new StringBuilder("SELECT _id, name, address, type, notes, phone FROM restaurants");
+    public List<Girl> getAll(String where, String orderBy) {//返回表中的数据, 默认创建时间排序
+        List<Girl> girls = new ArrayList<Girl>();
+        StringBuilder buf = new StringBuilder("SELECT * FROM " + TABLE_FAVORITE_GIRLS);
 
         if (where!=null) {
             buf.append(" WHERE ");
@@ -39,63 +47,99 @@ class GirlDBHelper extends SQLiteOpenHelper {
         if (orderBy!=null) {
             buf.append(" ORDER BY ");
             buf.append(orderBy);
+        } else {
+            buf.append(" ORDER BY createTime desc");
         }
 
-        return(getReadableDatabase().rawQuery(buf.toString(), null));
+        Cursor c = getReadableDatabase().rawQuery(buf.toString(), null);
+
+        if(c != null && c.moveToFirst()) {
+            do {
+                girls.add(getGirl(c));
+            }while (c.moveToNext());
+        }
+        return girls;
     }
 
-    public Cursor getById(String id) {//根据点击事件获取id,查询数据库
-        String[] args={id};
+    public Girl getById(int id) {
+        Log.d("cbx", "查询, id: " + id);
+        String[] args={id+""};
 
-        return(getReadableDatabase()
-                .rawQuery("SELECT _id, name, address, type, notes, phone FROM restaurants WHERE _ID=?",
-                        args));
+        Cursor c = getReadableDatabase()
+                .rawQuery("SELECT * FROM " + TABLE_FAVORITE_GIRLS + " WHERE _id=?",
+                        args);
+        if(c != null && c.moveToFirst()){
+            Girl girl = getGirl(c);
+            Log.d("cbx", "查询结果: " + girl.toString());
+            return girl;
+        }
+        Log.w("cbx", "查询结果: null");
+        return null;
     }
 
-    public void insert(String name, String address, String type, String notes, String phone) {
+    public void insert(Girl girl) {
+        Log.d("cbx", "插入->" + girl.toString());
+        Girl g = getById(girl.getId());
+        if(g != null) {
+            Log.w("cbx", "已存在！");
+            return;
+        }
+
         ContentValues cv=new ContentValues();
 
-        cv.put("name", name);
-        cv.put("address", address);
-        cv.put("type", type);
-        cv.put("notes", notes);
-        cv.put("phone", phone);
+        cv.put("_id", girl.getId());
+        cv.put("authorName", girl.getAuthorName());
+        cv.put("authorHeadImg", girl.getAuthorHeadImg());
+        cv.put("catalog", girl.getCatalog());
+        cv.put("title", girl.getTitle());
+        cv.put("issue", girl.getIssue());
+        cv.put("pictureCount", girl.getPictureCount());
 
-        getWritableDatabase().insert("restaurants", "name", cv);
+        getWritableDatabase().insert(TABLE_FAVORITE_GIRLS, "authorName", cv);
+        Log.d("cbx", "插入成功！");
     }
 
-    public void update(String id, String name, String address,
-                       String type, String notes, String phone) {
-        ContentValues cv=new ContentValues();
-        String[] args={id};
-
-        cv.put("name", name);
-        cv.put("address", address);
-        cv.put("type", type);
-        cv.put("notes", notes);
-        cv.put("phone", phone);
-
-        getWritableDatabase().update("restaurants", cv, "_ID=?",
-                args);
+    public void delete(int id) {
+        Log.d("cbx", "删除, id: " + id);
+        getWritableDatabase().delete(TABLE_FAVORITE_GIRLS, "_id=?", new String[]{id + ""});
+        Log.d("cbx", "删除成功！");
     }
 
-    public String getName(Cursor c) {
+    public Girl getGirl(Cursor c) {
+
+        if(c != null) {
+            return new Girl(getId(c), getAuthorName(c),
+                    getAuthorHeadImg(c), getTitle(c),
+                    getCatalog(c), getIssue(c), getPictureCount(c));
+        }
+        return null;
+    }
+
+    public int getId(Cursor c) {
+        return(c.getInt(0));
+    }
+
+    public String getAuthorName(Cursor c) {
         return(c.getString(1));
     }
 
-    public String getAddress(Cursor c) {
+    public String getAuthorHeadImg(Cursor c) {
         return(c.getString(2));
     }
 
-    public String getType(Cursor c) {
+    public String getCatalog(Cursor c) {
         return(c.getString(3));
     }
 
-    public String getNotes(Cursor c) {
+    public String getTitle(Cursor c) {
         return(c.getString(4));
     }
 
-    public String getPhone(Cursor c) {
+    public String getIssue(Cursor c) {
         return(c.getString(5));
+    }
+
+    public int getPictureCount(Cursor c) {
+        return(c.getInt(6));
     }
 }
