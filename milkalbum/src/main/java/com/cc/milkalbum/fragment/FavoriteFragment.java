@@ -1,34 +1,24 @@
 package com.cc.milkalbum.fragment;
+import com.cc.milkalbum.model.Girl;
+import com.cc.milkalbum.utils.ResInfoUtils;
+import java.util.ArrayList;
 
-import android.content.Context;
-import android.net.Uri;
-import android.os.Bundle;
-import android.support.v4.app.Fragment;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
 
-import com.cc.milkalbum.R;
-
-/**
- * A simple {@link Fragment} subclass.
- * Activities that contain this fragment must implement the
- * {@link FavoriteFragment.OnFragmentInteractionListener} interface
- * to handle interaction events.
- * Use the {@link FavoriteFragment#newInstance} factory method to
- * create an instance of this fragment.
- */
 public class FavoriteFragment extends BaseListFragment {
-
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    /**
+     * 初始化数据
+     */
+    protected void init() {
+        girls = new ArrayList<Girl>();
+        Girl general = new Girl();
+        girls.add(general);
     }
 
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_favorite, container, false);
+    /**
+     * 加载数据
+     */
+    protected void updateGirls(){
+        girls.add(0, new Girl());
     }
+
 }

@@ -1,35 +1,24 @@
 package com.cc.milkalbum.fragment;
+import com.cc.milkalbum.model.Girl;
+import com.cc.milkalbum.utils.ResInfoUtils;
 
-import android.content.Context;
-import android.net.Uri;
-import android.os.Bundle;
-import android.support.v4.app.Fragment;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
+import java.util.ArrayList;
+import java.util.Random;
 
-import com.cc.milkalbum.R;
 
-/**
- * A simple {@link Fragment} subclass.
- * Activities that contain this fragment must implement the
- * {@link LatestFragment.OnFragmentInteractionListener} interface
- * to handle interaction events.
- * Use the {@link LatestFragment#newInstance} factory method to
- * create an instance of this fragment.
- */
 public class LatestFragment extends BaseListFragment {
 
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    /**
+     * 加载数据
+     * girls的size永远是 GetDataLimit
+     * 每次随机刷新一个page显示
+     */
+    protected void updateGirls() throws Exception{
+        Random r = new Random();
+        girls.clear();
+        girls = ResInfoUtils.getGirlsInfo( r.nextInt(80), GetDataLimit);
+        while( girls == null ){
+            girls = ResInfoUtils.getGirlsInfo( r.nextInt(80), GetDataLimit);
+        }
     }
-
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_latest, container, false);
-    }
-
 }

@@ -1,109 +1,213 @@
 package com.cc.milkalbum.fragment;
 
+import android.app.Activity;
 import android.content.Context;
-import android.net.Uri;
+import android.graphics.Bitmap;
+import android.os.AsyncTask;
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
+import android.app.Fragment;
+import android.os.Handler;
+import android.util.Log;
+import android.util.SparseArray;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.BaseAdapter;
+import android.widget.ImageView;
+import android.widget.ListView;
+import android.widget.TextView;
+import android.widget.Toast;
 
+import com.cc.milkalbum.MyApplication;
 import com.cc.milkalbum.R;
+import com.cc.milkalbum.model.Girl;
+import com.cc.milkalbum.utils.ImgUtils;
+import com.handmark.pulltorefresh.library.PullToRefreshBase;
+import com.handmark.pulltorefresh.library.PullToRefreshListView;
 
-/**
- * A simple {@link Fragment} subclass.
- * Activities that contain this fragment must implement the
- * {@link BaseListFragment.OnFragmentInteractionListener} interface
- * to handle interaction events.
- * Use the {@link BaseListFragment#newInstance} factory method to
- * create an instance of this fragment.
- */
+import java.util.ArrayList;
+import java.util.List;
+
 public class BaseListFragment extends Fragment {
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-    private static final String ARG_PARAM1 = "param1";
-    private static final String ARG_PARAM2 = "param2";
+    protected List<Girl> girls;//要显示的数据集合
+    protected PullToRefreshListView lvGirls;//ListView对象
+    protected BaseAdapter girlAdapt;//适配器
+    private Activity mContext;
+    protected View mView;
+    protected ImgUtils imgUtils;
+    protected static final int GetDataLimit = 1;
 
-    // TODO: Rename and change types of parameters
-    private String mParam1;
-    private String mParam2;
 
-    private OnFragmentInteractionListener mListener;
+    private Handler handler = new Handler() {
+        public void handleMessage(android.os.Message msg) {
+            switch (msg.what) {
+                case ImgUtils.SUCCESS:
+                    //给控件设置图片
+                    Bitmap bitmap = (Bitmap) msg.obj;
+                    int position = msg.arg1;
+                    ImageView image = (ImageView) lvGirls.findViewWithTag(position); //根据条目的位置获取相应的控件
+                    if (image != null && bitmap != null) {
+                        image.setImageBitmap(bitmap);
+                    }
+                    Log.d("cbx", "Handler got message, findViewWithTag: " + position);
+                    girlAdapt.notifyDataSetChanged();
+                    break;
+                case ImgUtils.FAIL:
+                    Toast.makeText(getContext(), "图片下载失败", Toast.LENGTH_SHORT).show();
+                    break;
+            }
+        }
+    };
 
-    public BaseListFragment() {
-        // Required empty public constructor
-    }
-
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param param1 Parameter 1.
-     * @param param2 Parameter 2.
-     * @return A new instance of fragment BaseListFragment.
-     */
-    // TODO: Rename and change types and number of parameters
-    public static BaseListFragment newInstance(String param1, String param2) {
-        BaseListFragment fragment = new BaseListFragment();
-        Bundle args = new Bundle();
-        args.putString(ARG_PARAM1, param1);
-        args.putString(ARG_PARAM2, param2);
-        fragment.setArguments(args);
-        return fragment;
+    public Context getContext() {
+        if (mContext == null) {
+            return MyApplication.getInstance();
+        }
+        return mContext;
     }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        imgUtils = new ImgUtils(getContext(), handler);
         super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
-            mParam2 = getArguments().getString(ARG_PARAM2);
-        }
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+        mView = inflater.inflate(R.layout.fragment_base_list, container, false);
+        try {
+            init();//初始化要显示的数据集合
+        } catch (Exception e) {
+            Log.e("cbx", "Error when init girl list!");
+            e.printStackTrace();
+        }
+
+        // ListView对象、适配器
+        lvGirls = (PullToRefreshListView) mView.findViewById(R.id.lvGirls);
+        girlAdapt = new GeneralAdapter();
+        lvGirls.setAdapter(girlAdapt);
+
+        setListener();//设置按item事件
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_base_list, container, false);
+        return mView;
     }
 
-    // TODO: Rename method, update argument and hook method into UI event
-    public void onButtonPressed(Uri uri) {
-        if (mListener != null) {
-            mListener.onFragmentInteraction(uri);
+
+    private void setListener() {
+        lvGirls.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Toast.makeText(getContext(), girls.get(position - 1).getAuthorName() + ":被短按 ", Toast.LENGTH_SHORT).show();
+            }
+
+        });
+
+        lvGirls.setOnRefreshListener(new PullToRefreshBase.OnRefreshListener<ListView>() {
+            @Override
+            public void onRefresh(PullToRefreshBase<ListView> refreshView) {
+                new GetDataTask().execute();
+            }
+        });
+    }
+
+
+    /**
+     * 下拉加载执行de任务
+     */
+    private class GetDataTask extends AsyncTask<Void, Void, String[]> {
+
+        // 获取新的数据
+        @Override
+        protected String[] doInBackground(Void... params) {
+            try {
+                updateGirls();
+            } catch (Exception e) {
+                Log.e("cbx", "Error when update girl list!");
+                e.printStackTrace();
+            }
+            return new String[0];
         }
-    }
 
-    @Override
-    public void onAttach(Context context) {
-        super.onAttach(context);
-        if (context instanceof OnFragmentInteractionListener) {
-            mListener = (OnFragmentInteractionListener) context;
-        } else {
-            throw new RuntimeException(context.toString()
-                    + " must implement OnFragmentInteractionListener");
+        @Override
+        protected void onPostExecute(String[] result) {
+            // Call onRefreshComplete when the list has been refreshed.
+            lvGirls.onRefreshComplete();
+            girlAdapt.notifyDataSetChanged();
+            super.onPostExecute(result);
         }
-    }
-
-    @Override
-    public void onDetach() {
-        super.onDetach();
-        mListener = null;
     }
 
     /**
-     * This interface must be implemented by activities that contain this
-     * fragment to allow an interaction in this fragment to be communicated
-     * to the activity and potentially other fragments contained in that
-     * activity.
-     * <p/>
-     * See the Android Training lesson <a href=
-     * "http://developer.android.com/training/basics/fragments/communicating.html"
-     * >Communicating with Other Fragments</a> for more information.
+     * 初始化数据
      */
-    public interface OnFragmentInteractionListener {
-        // TODO: Update argument type and name
-        void onFragmentInteraction(Uri uri);
+    protected void init() throws Exception {
+        girls = new ArrayList<Girl>();
+        new GetDataTask().execute();
+    }
+
+    /**
+     * 加载数据
+     */
+    protected void updateGirls() throws Exception {
+        Log.e("cbx", "base list update called!!!");
+    }
+
+    class GeneralAdapter extends BaseAdapter {
+
+        //得到listView中item的总数
+        @Override
+        public int getCount() {
+            return girls.size();
+        }
+
+        @Override
+        public Girl getItem(int position) {
+            return girls.get(position);
+        }
+
+        @Override
+        public long getItemId(int position) {
+            return position;
+        }
+
+        private final class ViewHolder {
+            ImageView ivThumb;
+            TextView tvTitle;
+            ImageView ivAuthorHead;
+            TextView tvAuthorName;
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            ViewHolder mViewHolder;
+            if (convertView == null) {
+                mViewHolder = new ViewHolder();
+                convertView = View.inflate(getContext(), R.layout.activity_item_girls_, null);
+                mViewHolder.ivThumb = (ImageView) convertView.findViewById(R.id.iv_thumb);
+                mViewHolder.ivThumb.setTag(position*10);
+                mViewHolder.tvTitle = (TextView) convertView.findViewById(R.id.tv_title);
+                mViewHolder.ivAuthorHead = (ImageView) convertView.findViewById(R.id.iv_author_head);
+                mViewHolder.ivAuthorHead.setTag(position*10 + 1);
+                mViewHolder.tvAuthorName = (TextView) convertView.findViewById(R.id.tv_author_name);
+                convertView.setTag(mViewHolder);
+            } else {
+                mViewHolder = (ViewHolder) convertView.getTag();
+            }
+
+            Girl girl = girls.get(position);
+            //封面
+            mViewHolder.ivThumb.setImageBitmap(imgUtils.getBitmap(girl.getImgUrl(0), position*10));
+            //主题
+            mViewHolder.tvTitle.setText(girl.getTitle());
+            //作者姓名
+            mViewHolder.tvAuthorName.setText(girl.getAuthorName());
+            //作者头像
+            mViewHolder.ivAuthorHead.setImageBitmap(imgUtils.getBitmap(girl.getAuthorHeadImg(), position*10 + 1));
+
+            return convertView;
+        }
+
     }
 }
